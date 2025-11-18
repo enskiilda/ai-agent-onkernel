@@ -193,36 +193,39 @@ export class RealtimeSession {
 
     switch (event.type) {
       case "text-delta": {
-        const delta = typeof event.delta === "string" ? event.delta : event.textDelta ?? "";
+        const delta = (event as any).delta || (event as any).textDelta || "";
         if (!delta) return;
         this.handleTextDelta(delta);
         break;
       }
       case "tool-input-available": {
-        if (!event.toolCallId) return;
-        this.handleToolEvent(event.toolCallId, "call", {
-          toolName: event.toolName,
-          args: event.input,
-          argsText: event.input ? JSON.stringify(event.input, null, 2) : undefined,
+        const toolEvent = event as any;
+        if (!toolEvent.toolCallId) return;
+        this.handleToolEvent(toolEvent.toolCallId, "call", {
+          toolName: toolEvent.toolName,
+          args: toolEvent.input,
+          argsText: toolEvent.input ? JSON.stringify(toolEvent.input, null, 2) : undefined,
         });
-        if (event.input?.action === "screenshot") {
-          this.activeScreenshotToolId = event.toolCallId;
+        if (toolEvent.input?.action === "screenshot") {
+          this.activeScreenshotToolId = toolEvent.toolCallId;
         }
         break;
       }
       case "tool-output-available": {
-        if (!event.toolCallId) return;
-        this.handleToolEvent(event.toolCallId, "result", { result: event.output });
-        if (event.output?.type === "image") {
-          this.activeScreenshotToolId = event.toolCallId;
+        const outputEvent = event as any;
+        if (!outputEvent.toolCallId) return;
+        this.handleToolEvent(outputEvent.toolCallId, "result", { result: outputEvent.output });
+        if (outputEvent.output?.type === "image") {
+          this.activeScreenshotToolId = outputEvent.toolCallId;
         }
         break;
       }
       case "screenshot-update": {
+        const screenshotEvent = event as any;
         if (!this.activeScreenshotToolId) return;
-        if (!event.screenshot) return;
+        if (!screenshotEvent.screenshot) return;
         this.handleToolEvent(this.activeScreenshotToolId, "result", {
-          result: { type: "image", data: event.screenshot },
+          result: { type: "image", data: screenshotEvent.screenshot },
         });
         break;
       }
@@ -232,7 +235,8 @@ export class RealtimeSession {
         break;
       }
       case "error": {
-        const error = new Error(event.errorText || "Streaming error");
+        const errorEvent = event as any;
+        const error = new Error(errorEvent.errorText || "Streaming error");
         if (this.onError) {
           this.onError(error);
         }
